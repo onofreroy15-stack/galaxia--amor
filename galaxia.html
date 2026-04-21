@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Galaxia 3D Profesional | Amor en Órbita 360°</title>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+            font-family: 'Poppins', 'Segoe UI', 'Quicksand', sans-serif;
+        }
+        /* Panel de control flotante */
+        .controls {
+            position: fixed;
+            bottom: 20px;
+            left: 0;
+            right: 0;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 12px;
+            z-index: 100;
+            background: rgba(5, 5, 20, 0.7);
+            backdrop-filter: blur(12px);
+            padding: 12px 24px;
+            border-radius: 60px;
+            width: fit-content;
+            margin: 0 auto;
+            border: 1px solid rgba(255, 180, 220, 0.6);
+            box-shadow: 0 0 25px rgba(255, 80, 140, 0.3);
+            pointer-events: auto;
+            font-weight: 500;
+        }
+        button, .file-label {
+            background: rgba(255, 220, 240, 0.2);
+            border: none;
+            color: #ffeef4;
+            font-size: 0.9rem;
+            padding: 8px 18px;
+            border-radius: 40px;
+            cursor: pointer;
+            backdrop-filter: blur(4px);
+            transition: all 0.25s ease;
+            font-family: 'Poppins', sans-serif;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+        }
+        button:hover, .file-label:hover {
+            background: rgba(255, 120, 170, 0.8);
+            transform: scale(1.03);
+            box-shadow: 0 0 15px #ff80b0;
+        }
+        .file-label input {
+            display: none;
+        }
+        .title {
+            position: fixed;
+            top: 20px;
+            left: 0;
+            right: 0;
+            text-align: center;
+            z-index: 100;
+            font-size: 1.5rem;
+            font-weight: 700;
+            text-shadow: 0 0 20px #ff44aa, 0 0 35px #ff66cc;
+            background: linear-gradient(135deg, #ffe6f0, #ffb3d9);
+            -webkit-background-clip: text;
+            background-clip: text;
+            color: transparent;
+            letter-spacing: 2px;
+            pointer-events: none;
+            font-family: 'Dancing Script', cursive;
+        }
+        .info {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(0,0,0,0.5);
+            backdrop-filter: blur(5px);
+            padding: 5px 12px;
+            border-radius: 30px;
+            font-size: 0.7rem;
+            z-index: 100;
+            color: #ffd9e6;
+            pointer-events: none;
+            font-family: monospace;
+        }
+        @media (max-width: 700px) {
+            .controls { gap: 8px; padding: 8px 16px; }
+            button, .file-label { padding: 5px 12px; font-size: 0.7rem; }
+            .title { font-size: 1.2rem; top: 12px; }
+        }
+    </style>
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="title">
+        ✨🌌 GALAXIA para ti ROCII 🌌✨
+    </div>
+    <div class="controls">
+        <label class="file-label">
+            📸 SUBIR FOTO (aparecerá flotando)
+            <input type="file" id="photoUpload" accept="image/jpeg, image/png, image/jpg">
+        </label>
+        <button id="addStarBtn">✨ AÑADIR ESTRELLA DE AMOR</button>
+        <button id="resetViewBtn">⟳ REINICIAR CÁMARA</button>
+    </div>
+    <div class="info">
+        🖱️ Arrastra para girar 360° | 🖱️ Scroll para acercar/alejar
+    </div>
+
+    <!-- Importar Three.js y extensiones -->
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // ---------- LISTA DE FRASES ROMÁNTICAS (extraídas de las imágenes + palabras de amor) ----------
+        const romanticPhrases = [
+            "❤️ Love", " Teamo", "✨ amor de mi vida", "🌹 AMOR", "   MI VIDA",
+            "💗 Te-amo", "💞 Love & Love", "💓 Rocio", "🐊 cocodrilita",
+            "👑 mi niña", "💖 mi princesa", "💗 mi corazon", "🌙 mi vida", "💘 pasión eterna",
+            "✨ eres mi galaxy", "💫 TE AMO infinito", "🌸 mi cielo", "🌌 universo tuyo", "estrella"
+        ];
+        
+        // ---------- CONFIGURACIÓN INICIAL ----------
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020210);
+        scene.fog = new THREE.FogExp2(0x020210, 0.0006); // niebla sutil para profundidad
+        
+        // Cámara (perspectiva, posición para vista de galaxia)
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 3000);
+        camera.position.set(8, 5, 18);
+        camera.lookAt(0, 0, 0);
+        
+        // Renderers: WebGL para efectos 3D y CSS2D para textos/imágenes siempre visibles
+        const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(window.devicePixelRatio);
+        renderer.shadowMap.enabled = true; // sombras suaves
+        document.body.appendChild(renderer.domElement);
+        
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.left = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        document.body.appendChild(labelRenderer.domElement);
+        
+        // ---------- CONTROLES ORBIT (360° + zoom) ----------
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;          // inercia suave
+        controls.dampingFactor = 0.05;
+        controls.rotateSpeed = 1.2;
+        controls.zoomSpeed = 1.2;
+        controls.panSpeed = 0.8;
+        controls.enableZoom = true;
+        controls.zoomSpeed = 1.0;
+        controls.enablePan = true;
+        controls.target.set(0, 0, 0);
+        
+        // ---------- ILUMINACIÓN PROFESIONAL ----------
+        // Luz ambiental
+        const ambientLight = new THREE.AmbientLight(0x221133);
+        scene.add(ambientLight);
+        // Luz puntual central cálida
+        const centerLight = new THREE.PointLight(0xff66aa, 1.2, 40);
+        centerLight.position.set(0, 0, 0);
+        scene.add(centerLight);
+        // Luz frontal suave
+        const fillLight = new THREE.DirectionalLight(0xffccdd, 0.6);
+        fillLight.position.set(2, 3, 4);
+        scene.add(fillLight);
+        // Luz trasera para resaltar bordes
+        const backLight = new THREE.PointLight(0x44aaff, 0.5);
+        backLight.position.set(-2, -1, -3);
+        scene.add(backLight);
+        
+        // ---------- EFECTO ESTRELLAS (partículas masivas) ----------
+        const starGeometry = new THREE.BufferGeometry();
+        const starCount = 3500;
+        const starPositions = new Float32Array(starCount * 3);
+        const starColors = new Float32Array(starCount * 3);
+        for (let i = 0; i < starCount; i++) {
+            // Distribución esférica amplia
+            const radius = 150 + Math.random() * 200;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            starPositions[i*3] = radius * Math.sin(phi) * Math.cos(theta);
+            starPositions[i*3+1] = radius * Math.sin(phi) * Math.sin(theta) * 0.4; // aplanado
+            starPositions[i*3+2] = radius * Math.cos(phi);
+            const color = new THREE.Color().setHSL(0.55 + Math.random() * 0.2, 0.8, 0.5 + Math.random() * 0.3);
+            starColors[i*3] = color.r;
+            starColors[i*3+1] = color.g;
+            starColors[i*3+2] = color.b;
+        }
+        starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        starGeometry.setAttribute('color', new THREE.BufferAttribute(starColors, 3));
+        const starMaterial = new THREE.PointsMaterial({ size: 0.25, vertexColors: true, transparent: true, opacity: 0.8, blending: THREE.AdditiveBlending });
+        const starField = new THREE.Points(starGeometry, starMaterial);
+        scene.add(starField);
+        
+        // Segundo campo de estrellas pequeñas y lejanas
+        const bgStarGeo = new THREE.BufferGeometry();
+        const bgCount = 4000;
+        const bgPos = [];
+        for (let i = 0; i < bgCount; i++) {
+            bgPos.push((Math.random() - 0.5) * 800);
+            bgPos.push((Math.random() - 0.5) * 500);
+            bgPos.push((Math.random() - 0.5) * 400 - 150);
+        }
+        bgStarGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(bgPos), 3));
+        const bgStarMat = new THREE.PointsMaterial({ color: 0xffffff, size: 0.12, transparent: true, opacity: 0.5, blending: THREE.AdditiveBlending });
+        const bgStars = new THREE.Points(bgStarGeo, bgStarMat);
+        scene.add(bgStars);
+        
+        // ---------- NEBULOSA / POLVO GALÁCTICO (anillos y partículas) ----------
+        const dustGeo = new THREE.BufferGeometry();
+        const dustCount = 2500;
+        const dustPositions = [];
+        for (let i = 0; i < dustCount; i++) {
+            const r = 3 + Math.random() * 9;
+            const angle = Math.random() * Math.PI * 2;
+            const yOff = (Math.random() - 0.5) * 1.8;
+            dustPositions.push(Math.cos(angle) * r, yOff, Math.sin(angle) * r);
+        }
+        dustGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(dustPositions), 3));
+        const dustMat = new THREE.PointsMaterial({ color: 0xff88aa, size: 0.05, transparent: true, blending: THREE.AdditiveBlending });
+        const dustRing = new THREE.Points(dustGeo, dustMat);
+        scene.add(dustRing);
+        
+        // Anillo de estrellas orbitando (efecto visual)
+        const orbitRingGeo = new THREE.TorusGeometry(4.2, 0.08, 64, 400);
+        const ringMat = new THREE.MeshStandardMaterial({ color: 0xff77aa, emissive: 0x441133, roughness: 0.3, metalness: 0.7 });
+        const ring = new THREE.Mesh(orbitRingGeo, ringMat);
+        ring.rotation.x = Math.PI / 2;
+        scene.add(ring);
+        
+        const ring2Geo = new THREE.TorusGeometry(6.8, 0.05, 64, 500);
+        const ringMat2 = new THREE.MeshStandardMaterial({ color: 0xffaacc, emissive: 0x331122 });
+        const ring2 = new THREE.Mesh(ring2Geo, ringMat2);
+        ring2.rotation.x = Math.PI / 2 + 0.3;
+        scene.add(ring2);
+        
+        // ---------- CENTRO GLOW (corazón brillante) ----------
+        const coreGlow = new THREE.Mesh(
+            new THREE.SphereGeometry(0.9, 32, 32),
+            new THREE.MeshStandardMaterial({ color: 0xff44aa, emissive: 0xff2288, emissiveIntensity: 1.2, roughness: 0.2 })
+        );
+        scene.add(coreGlow);
+        // Luz pulsante
+        const pulseLight = new THREE.PointLight(0xff66cc, 1.2, 20);
+        pulseLight.position.set(0, 0, 0);
+        scene.add(pulseLight);
+        
+        // Corazón central (geometría personalizada)
+        const heartShape = new THREE.Shape();
+        heartShape.moveTo(0, 0.25);
+        heartShape.bezierCurveTo(0, 0.25, -0.3, -0.1, -0.3, -0.45);
+        heartShape.bezierCurveTo(-0.3, -0.7, 0, -0.8, 0, -0.6);
+        heartShape.bezierCurveTo(0, -0.8, 0.3, -0.7, 0.3, -0.45);
+        heartShape.bezierCurveTo(0.3, -0.1, 0, 0.25, 0, 0.25);
+        const heartGeo = new THREE.ExtrudeGeometry(heartShape, { depth: 0.2, bevelEnabled: true, bevelThickness: 0.05, bevelSize: 0.05, bevelSegments: 5 });
+        heartGeo.computeVertexNormals();
+        heartGeo.center();
+        const heartMat = new THREE.MeshStandardMaterial({ color: 0xff3366, emissive: 0x441122, roughness: 0.3, metalness: 0.2 });
+        const heartMesh = new THREE.Mesh(heartGeo, heartMat);
+        heartMesh.scale.set(0.65, 0.65, 0.65);
+        heartMesh.position.set(0, 0.1, 0);
+        scene.add(heartMesh);
+        
+        // ---------- ELEMENTOS FLOTANTES: FRASES + IMÁGENES (CSS2D) ----------
+        const floatingItems = []; // guardar { obj, radius, speed, angleY, yOffset, speedY }
+        
+        // Función para crear un div con texto romántico y estilo
+        function createLabel(text, bgColor = 'linear-gradient(135deg, )') {
+            const div = document.createElement('div');
+            div.textContent = text;
+            div.style.color = 'white';
+            div.style.fontFamily = "'Dancing Script', 'Poppins', cursive";
+            div.style.fontSize = '1.2rem';
+            div.style.fontWeight = 'bold';
+            div.style.textShadow = '0 0 12px #ff66aa';
+            div.style.background = bgColor;
+            div.style.padding = '8px 18px';
+            div.style.borderRadius = '60px';
+            div.style.border = '1px solid rgba(255,200,220,0.8)';
+            div.style.backdropFilter = 'blur(8px)';
+            div.style.boxShadow = '0 0 20px rgba(255,80,120,0.6)';
+            div.style.whiteSpace = 'nowrap';
+            div.style.letterSpacing = '1px';
+            return new CSS2DObject(div);
+        }
+        
+        // Crear imagen flotante (para subir fotos)
+        function createImageLabel(imgUrl, altText = "✨ Mi amor ✨") {
+            const div = document.createElement('div');
+            div.style.display = 'flex';
+            div.style.flexDirection = 'column';
+            div.style.alignItems = 'center';
+            div.style.background = 'rgba(0,0,0,0.5)';
+            div.style.backdropFilter = 'blur(12px)';
+            div.style.borderRadius = '20px';
+            div.style.padding = '8px';
+            div.style.border = '2px solid #ff99cc';
+            div.style.boxShadow = '0 0 25px #ff66aa';
+            const img = document.createElement('img');
+            img.src = imgUrl;
+            img.style.width = '90px';
+            img.style.height = '90px';
+            img.style.objectFit = 'cover';
+            img.style.borderRadius = '16px';
+            img.style.border = '2px solid #ffc0e0';
+            const caption = document.createElement('span');
+            caption.textContent = altText;
+            caption.style.color = '#fff0f5';
+            caption.style.fontSize = '0.8rem';
+            caption.style.fontFamily = "'Poppins', cursive";
+            caption.style.marginTop = '5px';
+            caption.style.textShadow = '0 0 5px #ff3388';
+            div.appendChild(img);
+            div.appendChild(caption);
+            return new CSS2DObject(div);
+        }
+        
+        // Inicializar todas las frases románticas orbitando en espiral 3D
+        const phrasesList = [...romanticPhrases];
+        // Añadir palabras especiales extra
+        const specialWords = ["💖 Rocio 💖", "🐊 cocodrilita", "👑 mi princesa", "💓 mi corazon", "🌙 mi vida", "💕 mi niña"];
+        phrasesList.push(...specialWords);
+        
+        // Configurar parámetros orbitales
+        const orbitGroup = [];
+        for (let i = 0; i < phrasesList.length; i++) {
+            const label = createLabel(phrasesList[i], `linear-gradient(135deg, rgba(${120 + i * 30 % 100}, 50, 100, 0.85), )`); //aqui es de las palabras
+
+            // Radio entre 3.5 y 9 unidades
+            const radius = 3.8 + Math.random() * 5.2;
+            const speed = (0.002 + Math.random() * 0.007) * (Math.random() > 0.6 ? 1 : -1);
+            const angleY = Math.random() * Math.PI * 2;
+            const yOffset = (Math.random() - 0.5) * 2.5;
+            const speedY = 0.001 + Math.random() * 0.003;
+            scene.add(label);
+            floatingItems.push({
+                obj: label,
+                radius: radius,
+                speed: speed,
+                angle: angleY,
+                yOffset: yOffset,
+                speedY: speedY,
+                yAngle: Math.random() * Math.PI * 2,
+                isImage: false
+            });
+        }
+        
+        // ---------- MANEJO DE SUBIDA DE IMÁGENES (convertir a objetos flotantes) ----------
+        const photoInput = document.getElementById('photoUpload');
+        photoInput.addEventListener('change', (event) => {
+            const file = event.target.files[0];
+            if (!file) return;
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                const imgUrl = e.target.result;
+                const imgLabel = createImageLabel(imgUrl, "💖 Mi amor 💖");
+                const radius = 4.5 + Math.random() * 6;
+                const speed = (0.0015 + Math.random() * 0.008) * (Math.random() > 0.5 ? 1 : -1);
+                const angleY = Math.random() * Math.PI * 2;
+                const yOffset = (Math.random() - 0.5) * 2.2;
+                const speedY = 0.0008 + Math.random() * 0.004;
+                scene.add(imgLabel);
+                floatingItems.push({
+                    obj: imgLabel,
+                    radius: radius,
+                    speed: speed,
+                    angle: angleY,
+                    yOffset: yOffset,
+                    speedY: speedY,
+                    yAngle: Math.random() * Math.PI * 2,
+                    isImage: true
+                });
+            };
+            reader.readAsDataURL(file);
+        });
+        
+        // Botón para añadir estrella de amor (nueva frase aleatoria)
+        document.getElementById('addStarBtn').addEventListener('click', () => {
+            const newPhrase = romanticPhrases[Math.floor(Math.random() * romanticPhrases.length)] + " ✨";
+            const label = createLabel(newPhrase, `linear-gradient(135deg, )`);
+            const radius = 3.5 + Math.random() * 7;
+            const speed = (0.001 + Math.random() * 0.01) * (Math.random() > 0.5 ? 1 : -1);
+            const angleY = Math.random() * Math.PI * 2;
+            const yOffset = (Math.random() - 0.5) * 2.8;
+            const speedY = 0.0005 + Math.random() * 0.005;
+            scene.add(label);
+            floatingItems.push({
+                obj: label,
+                radius: radius,
+                speed: speed,
+                angle: angleY,
+                yOffset: yOffset,
+                speedY: speedY,
+                yAngle: Math.random() * Math.PI * 2,
+                isImage: false
+            });
+        });
+        
+        // Botón reset view
+        document.getElementById('resetViewBtn').addEventListener('click', () => {
+            camera.position.set(8, 5, 18);
+            controls.target.set(0, 0, 0);
+            controls.update();
+        });
+        
+        // ---------- ANIMACIÓN Y MOVIMIENTO DE LAS ÓRBITAS ----------
+        let timeAcc = 0;
+        
+        // Partículas extra alrededor del centro (polvo brillante)
+        const glowParticlesGeo = new THREE.BufferGeometry();
+        const glowCount = 800;
+        const glowPos = [];
+        for (let i = 0; i < glowCount; i++) {
+            const rad = 1.2 + Math.random() * 3.5;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            glowPos.push(rad * Math.sin(phi) * Math.cos(theta), rad * Math.sin(phi) * Math.sin(theta), rad * Math.cos(phi));
+        }
+        glowParticlesGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(glowPos), 3));
+        const glowMat = new THREE.PointsMaterial({ color: 0xff88cc, size: 0.05, blending: THREE.AdditiveBlending });
+        const glowDust = new THREE.Points(glowParticlesGeo, glowMat);
+        scene.add(glowDust);
+        
+        // Rotación de anillos y estrellas
+        function animate() {
+            requestAnimationFrame(animate);
+            timeAcc += 0.016;
+            
+            // Actualizar posición de cada elemento flotante (órbitas 3D)
+            floatingItems.forEach(item => {
+                // Actualizar ángulo principal alrededor del eje Y
+                item.angle += item.speed;
+                if (item.angle > Math.PI * 2) item.angle -= Math.PI * 2;
+                // Movimiento vertical sinusoidal
+                item.yAngle += item.speedY;
+                const yPos = item.yOffset + Math.sin(item.yAngle) * 0.8;
+                const xPos = Math.cos(item.angle) * item.radius;
+                const zPos = Math.sin(item.angle) * item.radius;
+                item.obj.position.set(xPos, yPos, zPos);
+            });
+            
+            // Rotación de los anillos y elementos decorativos
+            ring.rotation.z += 0.003;
+            ring2.rotation.x += 0.002;
+            ring2.rotation.z -= 0.001;
+            dustRing.rotation.y += 0.005;
+            starField.rotation.y += 0.0005;
+            starField.rotation.x += 0.0003;
+            bgStars.rotation.y -= 0.0002;
+            glowDust.rotation.y += 0.01;
+            
+            // Pulsación del corazón y luz central
+            const pulse = 0.9 + Math.sin(timeAcc * 5) * 0.1;
+            coreGlow.scale.set(pulse, pulse, pulse);
+            heartMesh.scale.set(0.65 + Math.sin(timeAcc * 6) * 0.03, 0.65 + Math.sin(timeAcc * 6) * 0.03, 0.65 + Math.sin(timeAcc * 6) * 0.03);
+            pulseLight.intensity = 1.0 + Math.sin(timeAcc * 4) * 0.5;
+            centerLight.intensity = 1.0 + Math.sin(timeAcc * 3.2) * 0.3;
+            
+            // Actualizar controles y renderizar
+            controls.update(); // necesario para damping
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+        
+        // ---------- AJUSTE DE VENTANA ----------
+        window.addEventListener('resize', onWindowResize, false);
+        function onWindowResize() {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        }
+        
+        // ---------- EFECTO ADICIONAL: PARTÍCULAS DE POLVO MÁGICO ----------
+        const magicDustGeo = new THREE.BufferGeometry();
+        const magicCount = 1500;
+        const magicPos = [];
+        for (let i = 0; i < magicCount; i++) {
+            const r = 2 + Math.random() * 8;
+            const ang = Math.random() * Math.PI * 2;
+            const yLev = (Math.random() - 0.5) * 3;
+            magicPos.push(Math.cos(ang) * r, yLev, Math.sin(ang) * r);
+        }
+        magicDustGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(magicPos), 3));
+        const magicMat = new THREE.PointsMaterial({ color: 0xffaacc, size: 0.04, transparent: true, blending: THREE.AdditiveBlending });
+        const magicPoints = new THREE.Points(magicDustGeo, magicMat);
+        scene.add(magicPoints);
+        
+        // Iniciar animación
+        animate();
+        
+        // Consola amigable
+        console.log("✨🌠 Galaxia 3D Profesional Activa | Gira 360° y acerca con scroll | Las palabras y fotos orbitan mágicamente 🌌💖");
+        
+        // Instrucción adicional de música (opcional, el usuario puede agregar si quiere)
+        // Nota: sin música automática para evitar bloqueo, pero el diseño es totalmente inmersivo
+    </script>
+</body>
+</html>
