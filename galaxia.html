@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Galaxia | Imágenes y Frases Juntos</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Dancing+Script:wght@400;700&family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+</head>
+<body>
+    <div class="title">
+        ✨🌌 GALAXIA DE AMOR para ti ROCIII 🌌✨
+    </div>
+    <div class="controls">
+        <button id="addExtraImageBtn">📸 Adiciona imagenes</button>
+        <button id="addStarBtn">✨ AÑADIR ESTRELLA DE AMOR</button>
+        <button id="resetViewBtn">⟳ REINICIAR CÁMARA</button>
+    </div>
+    <div class="info">
+        🖱️ Arrastra 360° | 🔍 Zoom | te amare siempre
+    </div>
+
+    <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.128.0/build/three.module.js",
+                "three/addons/": "https://unpkg.com/three@0.128.0/examples/jsm/"
+            }
+        }
+    </script>
+
+    <script type="module">
+        import * as THREE from 'three';
+        import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+        import { CSS2DRenderer, CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+
+        // ---------- LISTA AMPLIADA DE FRASES ROMÁNTICAS (muchas más) ----------
+        const romanticPhrases = [
+            "❤️ Love", "💖 Teamo", "✨ amor de mi vida", "🌹 AMOR", "💕 MI VIDA",
+            "💗 Te-amo", "💞 Love & Love", "💓 Rocio", "🐊 cocodrilita",
+            "👑 mi niña", "💖 mi princesa", "💗 mi corazon", "🌙 mi vida", "💘 pasión eterna",
+            "✨ eres mi galaxy", "💫 TE AMO infinito", "🌸 mi cielo", "🌌 universo tuyo", "estrella mía",
+            "🌟 Brillas como estrella", "💎 Eres única", "🌹 Eres mi rosa", "💌 Para siempre",
+            "💋 Beso de luna", "🌈 Eres mi arcoíris", "💝 Te llevo en el alma", "🔥 Pasión infinita",
+            "🍫 Eres mi dulce", "🎶 Canciones de amor", "💍 Eres mi destino", "🌊 Como el mar, profundo",
+            "🍀 Mi buena suerte", "🧸 Mi osito", "👸 Mi reina", "💫 Eres mi estrella fugaz",
+            "✨ Magia pura", "💖 Latido especial", "🌻 Mi sol", "⭐ Eres brillante",
+            "💕 Amistad y amor", "🌙 Bajo la luna", "☀️ Eres mi día", "🕯️ Llama eterna"
+        ];
+        const specialWords = ["💖 Rocio 💖", "🐊 cocodrilita", "👑 mi princesa", "💓 mi corazon", "🌙 mi vida", "💕 mi niña", "✨ Mi cielo", "🌟 Estrella Rocio"];
+        const allPhrases = [...romanticPhrases, ...specialWords];
+        
+        // ---------- CONFIGURACIÓN 3D ----------
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020210);
+        scene.fog = new THREE.FogExp2(0x020210, 0.0005);
+        
+        const camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 3000);
+        camera.position.set(8, 5, 18);
+        
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+        renderer.shadowMap.enabled = true;
+        document.body.appendChild(renderer.domElement);
+        
+        const labelRenderer = new CSS2DRenderer();
+        labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        labelRenderer.domElement.style.position = 'absolute';
+        labelRenderer.domElement.style.top = '0px';
+        labelRenderer.domElement.style.left = '0px';
+        labelRenderer.domElement.style.pointerEvents = 'none';
+        document.body.appendChild(labelRenderer.domElement);
+        
+        // Controles
+        const controls = new OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+        controls.dampingFactor = 0.06;
+        controls.rotateSpeed = 1.0;
+        controls.zoomSpeed = 0.8;
+        controls.panSpeed = 0.6;
+        controls.enableZoom = true;
+        controls.enablePan = true;
+        controls.touchRotate = true;
+        controls.touchZoom = true;
+        controls.target.set(0, 0, 0);
+        
+        // Iluminación
+        const ambientLight = new THREE.AmbientLight(0x221133);
+        scene.add(ambientLight);
+        const centerLight = new THREE.PointLight(0xffaa66, 1.0, 35);
+        centerLight.position.set(0, 0, 0);
+        scene.add(centerLight);
+        const fillLight = new THREE.DirectionalLight(0xffccdd, 0.6);
+        fillLight.position.set(2, 3, 4);
+        scene.add(fillLight);
+        const backLight = new THREE.PointLight(0x44aaff, 0.4);
+        backLight.position.set(-2, -1, -3);
+        scene.add(backLight);
+        
+        // ---------- ESTRELLAS CON COLOR CAMBIANTE ----------
+        const starCount = 4000;
+        const starGeometry = new THREE.BufferGeometry();
+        const starPositions = new Float32Array(starCount * 3);
+        const starSizes = new Float32Array(starCount);
+        for (let i = 0; i < starCount; i++) {
+            const radius = 100 + Math.random() * 250;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            starPositions[i*3] = radius * Math.sin(phi) * Math.cos(theta);
+            starPositions[i*3+1] = radius * Math.sin(phi) * Math.sin(theta) * 0.35;
+            starPositions[i*3+2] = radius * Math.cos(phi);
+            starSizes[i] = 0.15 + Math.random() * 0.5;
+        }
+        starGeometry.setAttribute('position', new THREE.BufferAttribute(starPositions, 3));
+        starGeometry.setAttribute('size', new THREE.BufferAttribute(starSizes, 1));
+        
+        const vertexShader = `
+            attribute float size;
+            varying float vSeed;
+            void main() {
+                vSeed = position.x + position.y + position.z;
+                vec4 mvPosition = modelViewMatrix * vec4(position, 1.0);
+                gl_PointSize = size * ( 300.0 / - mvPosition.z ) * 1.2;
+                gl_Position = projectionMatrix * mvPosition;
+            }
+        `;
+        const fragmentShader = `
+            uniform float uTime;
+            varying float vSeed;
+            void main() {
+                float hue = fract( uTime * 0.15 + vSeed * 0.03 );
+                vec3 color = 0.5 + 0.5 * cos( 6.28318 * (hue + vec3(0.0, 0.33, 0.67)) );
+                gl_FragColor = vec4( color, 0.85 );
+            }
+        `;
+        const starUniforms = { uTime: { value: 0 } };
+        const starMaterial = new THREE.ShaderMaterial({
+            uniforms: starUniforms,
+            vertexShader: vertexShader,
+            fragmentShader: fragmentShader,
+            transparent: true,
+            blending: THREE.AdditiveBlending
+        });
+        const starField = new THREE.Points(starGeometry, starMaterial);
+        scene.add(starField);
+        
+        // Estrellas lejanas fijas
+        const bgStarGeo = new THREE.BufferGeometry();
+        const bgCount = 3000;
+        const bgPositions = [];
+        for (let i = 0; i < bgCount; i++) {
+            bgPositions.push((Math.random() - 0.5) * 900);
+            bgPositions.push((Math.random() - 0.5) * 600);
+            bgPositions.push((Math.random() - 0.5) * 500 - 150);
+        }
+        bgStarGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(bgPositions), 3));
+        const bgStarMat = new THREE.PointsMaterial({ color: 0xffccdd, size: 0.12, transparent: true, blending: THREE.AdditiveBlending });
+        const bgStars = new THREE.Points(bgStarGeo, bgStarMat);
+        scene.add(bgStars);
+        
+        // Polvo galáctico y anillos
+        const dustGeo = new THREE.BufferGeometry();
+        const dustCount = 2500;
+        const dustPositions = [];
+        for (let i = 0; i < dustCount; i++) {
+            const r = 3 + Math.random() * 9;
+            const angle = Math.random() * Math.PI * 2;
+            const yOff = (Math.random() - 0.5) * 1.8;
+            dustPositions.push(Math.cos(angle) * r, yOff, Math.sin(angle) * r);
+        }
+        dustGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(dustPositions), 3));
+        const dustMat = new THREE.PointsMaterial({ color: 0xff88aa, size: 0.05, transparent: true, blending: THREE.AdditiveBlending });
+        const dustRing = new THREE.Points(dustGeo, dustMat);
+        scene.add(dustRing);
+        
+        const ringGeo = new THREE.TorusGeometry(4.2, 0.07, 64, 400);
+        const ringMat = new THREE.MeshStandardMaterial({ color: 0xff77aa, emissive: 0x441133 });
+        const ring = new THREE.Mesh(ringGeo, ringMat);
+        ring.rotation.x = Math.PI / 2;
+        scene.add(ring);
+        
+        const ring2Geo = new THREE.TorusGeometry(6.5, 0.05, 64, 500);
+        const ring2Mat = new THREE.MeshStandardMaterial({ color: 0xffaacc, emissive: 0x331122 });
+        const ring2 = new THREE.Mesh(ring2Geo, ring2Mat);
+        ring2.rotation.x = Math.PI / 2 + 0.3;
+        scene.add(ring2);
+        
+        // ---------- CENTRO: ESTRELLA BRILLANTE ----------
+        const starGroup = new THREE.Group();
+        const coreStar = new THREE.Mesh(
+            new THREE.SphereGeometry(0.45, 32, 32),
+            new THREE.MeshStandardMaterial({ color: 0xffdd88, emissive: 0xffaa44, emissiveIntensity: 1.2, metalness: 0.8 })
+        );
+        starGroup.add(coreStar);
+        const spikeMaterial = new THREE.MeshStandardMaterial({ color: 0xffcc77, emissive: 0xff8844, emissiveIntensity: 0.8 });
+        for (let i = 0; i < 8; i++) {
+            const angle = (i / 8) * Math.PI * 2;
+            const cone = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.7, 8), spikeMaterial);
+            cone.position.set(Math.cos(angle) * 0.65, Math.sin(angle) * 0.65, 0);
+            cone.rotation.z = angle;
+            starGroup.add(cone);
+        }
+        const coneZ1 = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.7, 8), spikeMaterial);
+        coneZ1.position.set(0, 0, 0.65);
+        coneZ1.rotation.x = Math.PI / 2;
+        starGroup.add(coneZ1);
+        const coneZ2 = new THREE.Mesh(new THREE.ConeGeometry(0.18, 0.7, 8), spikeMaterial);
+        coneZ2.position.set(0, 0, -0.65);
+        coneZ2.rotation.x = -Math.PI / 2;
+        starGroup.add(coneZ2);
+        scene.add(starGroup);
+        const glowGeometry = new THREE.SphereGeometry(0.85, 16, 16);
+        const glowMaterial = new THREE.MeshBasicMaterial({ color: 0xffaa66, transparent: true, opacity: 0.25, blending: THREE.AdditiveBlending });
+        const outerGlow = new THREE.Mesh(glowGeometry, glowMaterial);
+        starGroup.add(outerGlow);
+        centerLight.color.setHex(0xffaa66);
+        
+        // Partículas alrededor de la estrella
+        const starDustGeo = new THREE.BufferGeometry();
+        const dustCenterPos = [];
+        for (let i = 0; i < 400; i++) {
+            const rad = 0.9 + Math.random() * 0.6;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            dustCenterPos.push(rad * Math.sin(phi) * Math.cos(theta), rad * Math.sin(phi) * Math.sin(theta), rad * Math.cos(phi));
+        }
+        starDustGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(dustCenterPos), 3));
+        const starDustMat = new THREE.PointsMaterial({ color: 0xffaa88, size: 0.03, blending: THREE.AdditiveBlending });
+        const starDustPoints = new THREE.Points(starDustGeo, starDustMat);
+        starGroup.add(starDustPoints);
+        
+        // ---------- ELEMENTOS FLOTANTES ----------
+        const floatingItems = []; // Guardará todos los objetos orbitantes
+        
+        // Función para crear tarjeta imagen+frase (tamaño reducido)
+        function createCard(imageUrl, phraseText) {
+            const div = document.createElement('div');
+            div.style.display = 'flex';
+            div.style.flexDirection = 'column';
+            div.style.alignItems = 'center';
+            div.style.justifyContent = 'center';
+            div.style.backgroundColor = 'rgba(0, 0, 0, 0.55)';
+            div.style.backdropFilter = 'blur(8px)';
+            div.style.borderRadius = '20px';
+            div.style.padding = '6px 12px';
+            div.style.border = '1px solid rgba(255, 200, 220, 0.7)';
+            div.style.boxShadow = '0 0 15px rgba(255, 120, 170, 0.5)';
+            div.style.gap = '6px';
+            
+            const img = document.createElement('img');
+            img.src = imageUrl;
+            img.style.width = '60px';
+            img.style.height = '60px';
+            img.style.objectFit = 'cover';
+            img.style.borderRadius = '12px';
+            img.style.border = '1px solid #ffc0e0';
+            
+            const textSpan = document.createElement('span');
+            textSpan.textContent = phraseText;
+            textSpan.style.color = 'white';
+            textSpan.style.fontFamily = "'Dancing Script', 'Poppins', cursive";
+            textSpan.style.fontSize = '0.9rem';
+            textSpan.style.fontWeight = 'bold';
+            textSpan.style.textAlign = 'center';
+            textSpan.style.textShadow = '0 0 8px #ff66aa';
+            textSpan.style.padding = '2px 6px';
+            textSpan.style.background = 'rgba(0,0,0,0.3)';
+            textSpan.style.borderRadius = '30px';
+            
+            div.appendChild(img);
+            div.appendChild(textSpan);
+            return new CSS2DObject(div);
+        }
+        
+        // Tarjeta solo texto (para estrellas de amor)
+        function createTextCard(phraseText) {
+            const div = document.createElement('div');
+            div.style.backgroundColor = 'rgba(0, 0, 0, 0.55)';
+            div.style.backdropFilter = 'blur(8px)';
+            div.style.borderRadius = '40px';
+            div.style.padding = '8px 16px';
+            div.style.border = '1px solid rgba(255,200,220,0.7)';
+            div.style.boxShadow = '0 0 15px rgba(255,120,170,0.5)';
+            div.style.display = 'inline-block';
+            
+            const textSpan = document.createElement('span');
+            textSpan.textContent = phraseText;
+            textSpan.style.color = 'white';
+            textSpan.style.fontFamily = "'Dancing Script', 'Poppins', cursive";
+            textSpan.style.fontSize = '0.95rem';
+            textSpan.style.fontWeight = 'bold';
+            textSpan.style.textShadow = '0 0 8px #ff66aa';
+            textSpan.style.whiteSpace = 'nowrap';
+            div.appendChild(textSpan);
+            return new CSS2DObject(div);
+        }
+        
+        // Función para agregar un elemento flotante con parámetros aleatorios
+        function addFloatingObject(obj, isImageCard = false) {
+            const radius = 3.8 + Math.random() * 5.5;
+            const speed = (0.0015 + Math.random() * 0.008) * (Math.random() > 0.6 ? 1 : -1);
+            const angleY = Math.random() * Math.PI * 2;
+            const yOffset = (Math.random() - 0.5) * 2.5;
+            const speedY = 0.001 + Math.random() * 0.003;
+            scene.add(obj);
+            floatingItems.push({
+                obj, radius, speed, angle: angleY, yOffset, speedY, yAngle: Math.random() * Math.PI * 2, isImageCard
+            });
+        }
+        
+        // ----- CARGAR IMÁGENES PRINCIPALES (carpeta /imagenes) -----
+        const mainImageUrls = [];
+        for (let i = 1; i <= 14; i++) {
+            mainImageUrls.push(`./imagenes/${i}.jpg`);
+            mainImageUrls.push(`./imagenes/${i}.png`);
+            mainImageUrls.push(`./imagenes/${i}.jpeg`);
+        }
+        
+        async function loadImagesAndCreateCards(urls, basePathDesc = "imagenes") {
+            const found = [];
+            for (let url of urls) {
+                const exists = await new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => resolve(true);
+                    img.onerror = () => resolve(false);
+                    img.src = url;
+                });
+                if (exists) {
+                    const name = url.split('/').pop().split('.')[0];
+                    if (!found.some(f => f.includes(name))) {
+                        found.push(url);
+                    }
+                }
+            }
+            for (let idx = 0; idx < found.length; idx++) {
+                const phrase = allPhrases[idx % allPhrases.length];
+                const card = createCard(found[idx], phrase);
+                addFloatingObject(card, true);
+            }
+            console.log(`✅ Cargadas ${found.length} imágenes desde ${basePathDesc}`);
+            return found.length;
+        }
+        
+        // Iniciar carga de imágenes principales
+        loadImagesAndCreateCards(mainImageUrls, "carpeta /imagenes");
+        
+        // También agregar algunas tarjetas de texto iniciales
+        for (let i = 0; i < 6; i++) {
+            const phrase = allPhrases[(allPhrases.length - i) % allPhrases.length];
+            const textCard = createTextCard(phrase);
+            addFloatingObject(textCard, false);
+        }
+        
+        // ----- FUNCIÓN PARA OBTENER UNA IMAGEN ALEATORIA DE LA CARPETA "adicionales" -----
+        let availableExtraImages = []; // almacenará las URLs de imágenes adicionales encontradas
+        
+        async function scanExtraImagesFolder() {
+            // Escanea la carpeta /adicionales/ hasta 50 imágenes (1..50) con extensiones comunes
+            const maxExtra = 50;
+            const extraPaths = [];
+            for (let i = 1; i <= maxExtra; i++) {
+                extraPaths.push(`./adicionales/${i}.jpg`);
+                extraPaths.push(`./adicionales/${i}.png`);
+                extraPaths.push(`./adicionales/${i}.jpeg`);
+            }
+            const found = [];
+            for (let path of extraPaths) {
+                const exists = await new Promise((resolve) => {
+                    const img = new Image();
+                    img.onload = () => resolve(true);
+                    img.onerror = () => resolve(false);
+                    img.src = path;
+                });
+                if (exists) {
+                    const number = path.match(/\/(\d+)\./)[1];
+                    if (!found.some(f => f.includes(`/${number}.`))) {
+                        found.push(path);
+                    }
+                }
+            }
+            availableExtraImages = found;
+            console.log(`📸 Escaneadas imágenes adicionales: ${availableExtraImages.length} encontradas en /adicionales/`);
+            return availableExtraImages;
+        }
+        
+        // Al inicio, escaneamos la carpeta adicional para tener lista
+        scanExtraImagesFolder();
+        
+        // Botón para agregar una imagen adicional ALEATORIA (similar a estrella de amor)
+        document.getElementById('addExtraImageBtn').addEventListener('click', async () => {
+            // Si aún no tenemos la lista o está vacía, volvemos a escanear
+            if (availableExtraImages.length === 0) {
+                await scanExtraImagesFolder();
+            }
+            if (availableExtraImages.length === 0) {
+                alert("No se encontraron imágenes en la carpeta 'adicionales'. Coloca tus fotos allí (nombradas 1.jpg, 2.png, ...) e intenta de nuevo.");
+                return;
+            }
+            // Seleccionar una imagen aleatoria
+            const randomIndex = Math.floor(Math.random() * availableExtraImages.length);
+            const randomImageUrl = availableExtraImages[randomIndex];
+            // Seleccionar una frase aleatoria
+            const randomPhrase = allPhrases[Math.floor(Math.random() * allPhrases.length)] + " ✨";
+            const newCard = createCard(randomImageUrl, randomPhrase);
+            addFloatingObject(newCard, true);
+            console.log(`✨ Agregada imagen adicional aleatoria: ${randomImageUrl} con frase "${randomPhrase}"`);
+            // Efecto visual opcional: un pequeño "pop" de notificación no es necesario, pero se siente bien
+        });
+        
+        // Botón para añadir estrella de amor (texto)
+        document.getElementById('addStarBtn').addEventListener('click', () => {
+            const newPhrase = allPhrases[Math.floor(Math.random() * allPhrases.length)] + " 🌟";
+            const textCard = createTextCard(newPhrase);
+            addFloatingObject(textCard, false);
+        });
+        
+        document.getElementById('resetViewBtn').addEventListener('click', () => {
+            camera.position.set(8, 5, 18);
+            controls.target.set(0, 0, 0);
+            controls.update();
+        });
+        
+        // Partículas decorativas (glow y magic dust)
+        const glowCount = 800;
+        const glowPositions = [];
+        for (let i = 0; i < glowCount; i++) {
+            const rad = 1.2 + Math.random() * 3.5;
+            const theta = Math.random() * Math.PI * 2;
+            const phi = Math.acos(2 * Math.random() - 1);
+            glowPositions.push(rad * Math.sin(phi) * Math.cos(theta), rad * Math.sin(phi) * Math.sin(theta), rad * Math.cos(phi));
+        }
+        const glowGeo = new THREE.BufferGeometry();
+        glowGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(glowPositions), 3));
+        const glowMat = new THREE.PointsMaterial({ color: 0xffaa77, size: 0.06, blending: THREE.AdditiveBlending });
+        const glowDust = new THREE.Points(glowGeo, glowMat);
+        scene.add(glowDust);
+        
+        const magicCount = 1500;
+        const magicPositions = [];
+        for (let i = 0; i < magicCount; i++) {
+            const r = 2 + Math.random() * 8;
+            const ang = Math.random() * Math.PI * 2;
+            const yLev = (Math.random() - 0.5) * 3;
+            magicPositions.push(Math.cos(ang) * r, yLev, Math.sin(ang) * r);
+        }
+        const magicGeo = new THREE.BufferGeometry();
+        magicGeo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(magicPositions), 3));
+        const magicMat = new THREE.PointsMaterial({ color: 0xffaacc, size: 0.05, transparent: true, blending: THREE.AdditiveBlending });
+        const magicPoints = new THREE.Points(magicGeo, magicMat);
+        scene.add(magicPoints);
+        
+        // ---------- ANIMACIÓN ----------
+        let timeAcc = 0;
+        
+        function animate() {
+            requestAnimationFrame(animate);
+            timeAcc += 0.016;
+            
+            starUniforms.uTime.value = timeAcc;
+            
+            const scalePulse = 1 + Math.sin(timeAcc * 6) * 0.05;
+            starGroup.scale.set(scalePulse, scalePulse, scalePulse);
+            centerLight.intensity = 0.9 + Math.sin(timeAcc * 5) * 0.3;
+            starGroup.rotation.z = Math.sin(timeAcc * 0.8) * 0.2;
+            starGroup.rotation.x = Math.sin(timeAcc * 0.5) * 0.1;
+            
+            floatingItems.forEach(item => {
+                item.angle += item.speed;
+                if (item.angle > Math.PI * 2) item.angle -= Math.PI * 2;
+                item.yAngle += item.speedY;
+                const yPos = item.yOffset + Math.sin(item.yAngle) * 0.8;
+                const xPos = Math.cos(item.angle) * item.radius;
+                const zPos = Math.sin(item.angle) * item.radius;
+                item.obj.position.set(xPos, yPos, zPos);
+            });
+            
+            ring.rotation.z += 0.003;
+            ring2.rotation.x += 0.002;
+            ring2.rotation.z -= 0.001;
+            dustRing.rotation.y += 0.005;
+            bgStars.rotation.y -= 0.0002;
+            glowDust.rotation.y += 0.01;
+            magicPoints.rotation.y += 0.003;
+            
+            controls.update();
+            renderer.render(scene, camera);
+            labelRenderer.render(scene, camera);
+        }
+        
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+            labelRenderer.setSize(window.innerWidth, window.innerHeight);
+        });
+        
+        animate();
+        console.log("✨ Galaxia lista | Botón 'AGREGAR FOTO ADICIONAL' -> elige una imagen al azar de la carpeta /adicionales/");
+    </script>
+</body>
+</html>
